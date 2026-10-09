@@ -1,0 +1,1140 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API CRM APL",
+    "description": "Documentation de l'API CRM APL.\n\nCette API donne accès en lecture aux données du CRM Dynamics 365 d'APL (clients, équipes, produits,\nopportunités, abonnements) et permet de rouvrir une opportunité.\nLes données sont mises en cache 6 heures, sauf `/clients/{accountId}/opportunites` qui interroge le CRM en direct.\n\nToutes les réponses suivent le même format : un bloc `header` (statut, message, total, nombre)\nsuivi des données. Les champs sans valeur ne sont pas renvoyés.\n\nLes mêmes fonctionnalités sont proposées sous forme d'outils MCP sur `/mcp`.\n",
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "https://{hote}/api",
+      "description": "Accès via le tunnel (Dev Tunnels)",
+      "variables": {
+        "hote": {
+          "default": "abc123xy-53801.euw.devtunnels.ms",
+          "description": "Nom d'hôte du tunnel affiché par `devtunnel host mcp-crm`"
+        }
+      }
+    },
+    {
+      "url": "http://localhost:53801/api",
+      "description": "Poste de développement"
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Client",
+      "description": "API clients (fiches, équipes, opportunités d'un client)"
+    },
+    {
+      "name": "Produit",
+      "description": "API produits (catalogue et lignes produits d'opportunité)"
+    },
+    {
+      "name": "Opportunite",
+      "description": "API opportunités"
+    },
+    {
+      "name": "Abonnement",
+      "description": "API abonnements"
+    }
+  ],
+  "paths": {
+    "/clients": {
+      "get": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Recherche de clients",
+        "description": "Recherche les clients dont le nom ou le n° de dossier contient le texte `q`. Sans `q`, renvoie les premiers clients.",
+        "operationId": "rechercherClients",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/q"
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseClients"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/clients/{identifiant}": {
+      "get": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Fiche d'un client",
+        "description": "Renvoie la fiche détaillée d'un client (adresse, SIREN, email de facturation, contacts) à partir de son AccountId ou de son n° de dossier.",
+        "operationId": "findClient",
+        "parameters": [
+          {
+            "name": "identifiant",
+            "in": "path",
+            "description": "AccountId (Guid CRM) ou n° de dossier du client",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "123456"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseClient"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/clients/{accountId}/opportunites": {
+      "get": {
+        "tags": [
+          "Client",
+          "Opportunite"
+        ],
+        "summary": "Opportunités d'un client",
+        "description": "Renvoie le résumé des opportunités d'un client, lues directement dans le CRM (pas de cache).",
+        "operationId": "opportunitesClient",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "description": "AccountId (Guid CRM) du client",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseOpportunites"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/equipes": {
+      "get": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Équipe APL des clients",
+        "description": "Renvoie, pour les clients dont le nom ou le n° de dossier contient `q`, leur forme juridique, leur statut et leur équipe APL (expert signataire, expert-comptable, responsables, chargé de dossier, assistant, opérateur de saisie).",
+        "operationId": "rechercherEquipes",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/q"
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseEquipes"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/produits": {
+      "get": {
+        "tags": [
+          "Produit"
+        ],
+        "summary": "Recherche dans le catalogue produits",
+        "description": "Recherche les produits du catalogue dont le libellé contient `q`. Sans `q`, renvoie les premiers produits.",
+        "operationId": "rechercherProduits",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/q"
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseProduits"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/lignesProduits/{id}": {
+      "get": {
+        "tags": [
+          "Produit"
+        ],
+        "summary": "Détail d'une ligne produit d'opportunité",
+        "operationId": "findLigneProduit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/idLigneProduit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseLigneProduit"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/lignesProduits/{id}/opportunite": {
+      "get": {
+        "tags": [
+          "Produit",
+          "Opportunite"
+        ],
+        "summary": "Opportunité contenant une ligne produit",
+        "description": "Renvoie l'opportunité complète, avec toutes ses lignes produits, qui contient la ligne produit donnée.",
+        "operationId": "findOpportuniteDuProduit",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/idLigneProduit"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseOpportunite"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/opportunites": {
+      "get": {
+        "tags": [
+          "Opportunite"
+        ],
+        "summary": "Recherche d'opportunités",
+        "description": "Recherche les opportunités dont le nom ou le n° de dossier contient `q` et renvoie leur résumé.",
+        "operationId": "rechercherOpportunites",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/q"
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseOpportunites"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/opportunites/{id}/reouverture": {
+      "post": {
+        "tags": [
+          "Opportunite"
+        ],
+        "summary": "Réouverture d'une opportunité",
+        "description": "**Écriture dans le CRM de production.** Rouvre une opportunité fermée.\nRéservé aux clés d'API ayant le rôle `ecriture`. Chaque appel est tracé dans le journal d'audit.\n",
+        "operationId": "rouvrirOpportunite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Id (Guid) de l'opportunité",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseErreur"
+                },
+                "example": {
+                  "header": {
+                    "statut": 200,
+                    "message": "Opportunité 3f2a1c4e-0000-0000-0000-000000000000 rouverte"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "403": {
+            "$ref": "#/components/responses/Interdit"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
+    "/abonnements": {
+      "get": {
+        "tags": [
+          "Abonnement"
+        ],
+        "summary": "Recherche d'abonnements",
+        "description": "Recherche les abonnements par n° de dossier, libellé ou AccountId (Guid) du client.",
+        "operationId": "rechercherAbonnements",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "N° de dossier, libellé ou AccountId (Guid) du client",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseAbonnements"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Api-Key"
+      }
+    },
+    "parameters": {
+      "q": {
+        "name": "q",
+        "in": "query",
+        "description": "Texte recherché (nom ou n° de dossier), sans tenir compte des majuscules",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "dupont"
+      },
+      "nombre": {
+        "name": "nombre",
+        "in": "query",
+        "description": "Nombre maximal d'éléments renvoyés",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 20
+        }
+      },
+      "idLigneProduit": {
+        "name": "id",
+        "in": "path",
+        "description": "Id (Guid) de la ligne produit d'opportunité",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    },
+    "responses": {
+      "MauvaiseRequete": {
+        "description": "Nombre incorrect de paramètres ou les paramètres sont mal formatés",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ReponseErreur"
+            }
+          }
+        }
+      },
+      "NonAutorise": {
+        "description": "Clé d'API absente ou invalide (en-tête X-Api-Key)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ReponseErreur"
+            }
+          }
+        }
+      },
+      "Interdit": {
+        "description": "Droits insuffisants (rôle `ecriture` requis)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ReponseErreur"
+            }
+          }
+        }
+      },
+      "NonTrouve": {
+        "description": "Aucun élément trouvé",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ReponseErreur"
+            }
+          }
+        }
+      },
+      "ErreurInterne": {
+        "description": "Erreur interne du serveur ou du CRM",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ReponseErreur"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "Header": {
+        "type": "object",
+        "required": [
+          "statut",
+          "message"
+        ],
+        "properties": {
+          "statut": {
+            "type": "integer",
+            "description": "Code retour HTTP",
+            "examples": [
+              200
+            ]
+          },
+          "message": {
+            "type": "string",
+            "description": "Message accompagnant le code retour",
+            "examples": [
+              "OK"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "description": "Nombre total d'éléments correspondant à la recherche (listes uniquement)",
+            "examples": [
+              42
+            ]
+          },
+          "nombre": {
+            "type": "integer",
+            "description": "Nombre d'éléments renvoyés (listes uniquement)",
+            "examples": [
+              20
+            ]
+          }
+        }
+      },
+      "ReponseErreur": {
+        "type": "object",
+        "required": [
+          "header"
+        ],
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          }
+        }
+      },
+      "ReponseClients": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientResume"
+            }
+          }
+        }
+      },
+      "ReponseClient": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientDetail"
+          }
+        }
+      },
+      "ReponseEquipes": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "equipes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EquipeClient"
+            }
+          }
+        }
+      },
+      "ReponseProduits": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "produits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Produit"
+            }
+          }
+        }
+      },
+      "ReponseLigneProduit": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "ligneProduit": {
+            "$ref": "#/components/schemas/LigneProduit"
+          }
+        }
+      },
+      "ReponseOpportunites": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "opportunites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpportuniteResume"
+            }
+          }
+        }
+      },
+      "ReponseOpportunite": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "opportunite": {
+            "$ref": "#/components/schemas/Opportunite"
+          }
+        }
+      },
+      "ReponseAbonnements": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "abonnements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Abonnement"
+            }
+          }
+        }
+      },
+      "ClientResume": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identifiant du compte dans le CRM"
+          },
+          "noDossier": {
+            "type": "string",
+            "description": "N° de dossier Cegid"
+          },
+          "nom": {
+            "type": "string",
+            "description": "Raison sociale ou nom du client"
+          },
+          "emailFacturation": {
+            "type": "string",
+            "format": "email",
+            "description": "Email de facturation (contact administratif, à défaut dirigeant)"
+          }
+        }
+      },
+      "ClientDetail": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "siren": {
+            "type": "string",
+            "description": "Numéro SIREN (9 chiffres)",
+            "examples": [
+              "005520135"
+            ]
+          },
+          "emailFacturation": {
+            "type": "string",
+            "format": "email"
+          },
+          "telephone": {
+            "type": "string"
+          },
+          "adresse": {
+            "$ref": "#/components/schemas/Adresse"
+          },
+          "personnePhysique": {
+            "type": "boolean",
+            "description": "Vrai si le client est une personne physique"
+          },
+          "tauxTvaSpecifique": {
+            "type": "number",
+            "description": "Taux de TVA spécifique au client, s'il en a un"
+          },
+          "contactAdministratif": {
+            "$ref": "#/components/schemas/Contact"
+          },
+          "dirigeant": {
+            "$ref": "#/components/schemas/Contact"
+          }
+        }
+      },
+      "Adresse": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "ligne1": {
+            "type": "string"
+          },
+          "ligne2": {
+            "type": "string"
+          },
+          "ligne3": {
+            "type": "string"
+          },
+          "codePostal": {
+            "type": "string"
+          },
+          "ville": {
+            "type": "string"
+          },
+          "pays": {
+            "type": "string"
+          }
+        }
+      },
+      "Contact": {
+        "type": "object",
+        "properties": {
+          "nom": {
+            "type": "string"
+          },
+          "prenom": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "telephone": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          }
+        }
+      },
+      "Collaborateur": {
+        "type": "object",
+        "description": "Collaborateur APL",
+        "properties": {
+          "nomComplet": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        }
+      },
+      "EquipeClient": {
+        "type": "object",
+        "properties": {
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "formeJuridique": {
+            "$ref": "#/components/schemas/FormeJuridique"
+          },
+          "statut": {
+            "type": "string"
+          },
+          "expertSignataire": {
+            "$ref": "#/components/schemas/Collaborateur"
+          },
+          "expertComptable": {
+            "$ref": "#/components/schemas/Collaborateur"
+          },
+          "responsableJuridique": {
+            "$ref": "#/components/schemas/Collaborateur"
+          },
+          "responsableRh": {
+            "$ref": "#/components/schemas/Collaborateur"
+          },
+          "chargeDeDossier": {
+            "$ref": "#/components/schemas/Collaborateur"
+          },
+          "assistant": {
+            "$ref": "#/components/schemas/Collaborateur"
+          },
+          "operateurSaisie": {
+            "$ref": "#/components/schemas/Collaborateur"
+          }
+        }
+      },
+      "Produit": {
+        "type": "object",
+        "description": "Produit du catalogue",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          }
+        }
+      },
+      "LigneProduit": {
+        "type": "object",
+        "description": "Ligne produit d'une opportunité",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "produitCatalogueId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "commentaire": {
+            "type": "string"
+          },
+          "prixUnitaire": {
+            "type": "number",
+            "description": "Prix unitaire (0 si la ligne est offerte)"
+          },
+          "remise": {
+            "type": "number"
+          },
+          "offert": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OpportuniteResume": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "statut": {
+            "$ref": "#/components/schemas/StatutOpportunite"
+          },
+          "recurrente": {
+            "type": "boolean"
+          },
+          "montant": {
+            "type": "number"
+          },
+          "frequenceFacturation": {
+            "$ref": "#/components/schemas/FrequenceFacturation"
+          },
+          "premiereFacturation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "derniereFacturation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "nombreProduits": {
+            "type": "integer"
+          }
+        }
+      },
+      "Opportunite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "statut": {
+            "$ref": "#/components/schemas/StatutOpportunite"
+          },
+          "recurrente": {
+            "type": "boolean"
+          },
+          "montant": {
+            "type": "number"
+          },
+          "frequenceFacturation": {
+            "$ref": "#/components/schemas/FrequenceFacturation"
+          },
+          "nombreEcheances": {
+            "type": "integer"
+          },
+          "premiereFacturation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "derniereFacturation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finExercice": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modePaiement": {
+            "$ref": "#/components/schemas/ModePaiement"
+          },
+          "joursPaiementApresFacturation": {
+            "type": "integer"
+          },
+          "lignesProduits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LigneProduit"
+            }
+          }
+        }
+      },
+      "Abonnement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "libelle": {
+            "type": "string"
+          },
+          "frequence": {
+            "$ref": "#/components/schemas/FrequenceAbonnement"
+          }
+        }
+      },
+      "StatutOpportunite": {
+        "type": "string",
+        "description": "Waiting : en attente de validation, Validated : validée comme conclue, Cancelled : annulée",
+        "enum": [
+          "Waiting",
+          "Validated",
+          "Cancelled"
+        ]
+      },
+      "FrequenceFacturation": {
+        "type": "string",
+        "enum": [
+          "Monthly",
+          "Quarterly",
+          "SemiAnnually",
+          "Annually"
+        ]
+      },
+      "ModePaiement": {
+        "type": "string",
+        "description": "AplDirectDebit : prélèvement par APL, CustomerPayment : paiement par le client",
+        "enum": [
+          "AplDirectDebit",
+          "CustomerPayment"
+        ]
+      },
+      "FrequenceAbonnement": {
+        "type": "string",
+        "enum": [
+          "Mensuel",
+          "Bimestriel",
+          "Trimestriel",
+          "Quadrimestriel",
+          "Semestriel",
+          "Annuel"
+        ]
+      },
+      "FormeJuridique": {
+        "type": "string",
+        "enum": [
+          "ASS",
+          "CE",
+          "DIVERS",
+          "EARL",
+          "EI",
+          "EIRL",
+          "EURL",
+          "GAEC",
+          "GFA",
+          "GIE",
+          "INDIV",
+          "MicroEntreprise",
+          "PersonnePhysique",
+          "SA",
+          "SADIR",
+          "SARL",
+          "SAS",
+          "SASU",
+          "SC",
+          "SCEA",
+          "SCI",
+          "SCM",
+          "SCOP",
+          "SCP",
+          "SDF",
+          "SELARL",
+          "SELAS",
+          "SEM",
+          "SEP",
+          "SNC",
+          "SPFPL"
+        ]
+      }
+    }
+  }
+}
