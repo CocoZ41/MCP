@@ -11,7 +11,7 @@
       "description": "Accès via le tunnel (Dev Tunnels)",
       "variables": {
         "hote": {
-          "default": "abc123xy-53801.euw.devtunnels.ms",
+          "default": "06wqhvsz-53801.uks1.devtunnels.ms",
           "description": "Nom d'hôte du tunnel affiché par `devtunnel host mcp-crm`"
         }
       }
