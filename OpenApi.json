@@ -185,8 +185,8 @@
         "tags": [
           "Client"
         ],
-        "summary": "Équipe APL des clients",
-        "description": "Renvoie, pour les clients dont le nom ou le n° de dossier contient `q`, leur forme juridique, leur statut et leur équipe APL (expert signataire, expert-comptable, responsables, chargé de dossier, assistant, opérateur de saisie).",
+        "summary": "Personnes assignées à un dossier client, avec leur rôle",
+        "description": "Renvoie, pour chaque dossier client dont le nom ou le n° de dossier contient `q`, la liste des personnes APL assignées avec leur rôle. La liste `affectations` contient toujours les 9 rôles, dans cet ordre : Réviseur, Logistique, Réviseur 2, Responsable dossier, Responsable RH, Expert signataire, Expert comptable, Responsable juridique, Commercial APL. Chaque personne a un nom complet, un e-mail, un téléphone et un mobile. Quand personne n'est assigné à un rôle, l'entrée ne contient que `role` et `remarque` (« Personne n'est assigné à ce rôle »). Indique aussi la forme juridique et le statut du client. À utiliser pour toute question du type « qui travaille sur le dossier X », « qui est assigné à », « qui est le responsable dossier / l'expert comptable / le réviseur de X », « collaborateurs », « équipe », « affectations ». Répondre uniquement à partir de ces données, sans jamais inventer de personne.",
         "operationId": "rechercherEquipes",
         "parameters": [
           {
@@ -847,19 +847,6 @@
           }
         }
       },
-      "Collaborateur": {
-        "type": "object",
-        "description": "Collaborateur APL",
-        "properties": {
-          "nomComplet": {
-            "type": "string"
-          },
-          "email": {
-            "type": "string",
-            "format": "email"
-          }
-        }
-      },
       "EquipeClient": {
         "type": "object",
         "properties": {
@@ -879,27 +866,38 @@
           "statut": {
             "type": "string"
           },
-          "expertSignataire": {
-            "$ref": "#/components/schemas/Collaborateur"
-          },
-          "expertComptable": {
-            "$ref": "#/components/schemas/Collaborateur"
-          },
-          "responsableJuridique": {
-            "$ref": "#/components/schemas/Collaborateur"
-          },
-          "responsableRh": {
-            "$ref": "#/components/schemas/Collaborateur"
-          },
-          "chargeDeDossier": {
-            "$ref": "#/components/schemas/Collaborateur"
-          },
-          "assistant": {
-            "$ref": "#/components/schemas/Collaborateur"
-          },
-          "operateurSaisie": {
-            "$ref": "#/components/schemas/Collaborateur"
+          "affectations": {
+            "type": "array",
+            "description": "Une entrée par rôle, dans l'ordre : Réviseur, Logistique, Réviseur 2, Responsable dossier, Responsable RH, Expert signataire, Expert comptable, Responsable juridique, Commercial APL",
+            "items": {
+              "$ref": "#/components/schemas/Affectation"
+            }
           }
+        },
+        "example": {
+          "accountId": "ef773f4c-14e8-eb11-bacb-0022489b9951",
+          "noDossier": "07876",
+          "nom": "CARQUEFOOD",
+          "formeJuridique": "SASU",
+          "statut": "Sortie Client",
+          "affectations": [
+            {
+              "role": "Réviseur",
+              "nomComplet": "William EMPEIGNE",
+              "email": "william.ext@auditpl.fr",
+              "telephone": "0102030405",
+              "mobile": "0601020304"
+            },
+            {
+              "role": "Logistique",
+              "nomComplet": "Anne-Sophie ALIX",
+              "email": "as.alix@auditpl.fr"
+            },
+            {
+              "role": "Réviseur 2",
+              "remarque": "Personne n'est assigné à ce rôle"
+            }
+          ]
         }
       },
       "Produit": {
@@ -1134,6 +1132,33 @@
           "SNC",
           "SPFPL"
         ]
+      },
+      "Affectation": {
+        "type": "object",
+        "description": "Personne APL assignée à un rôle du dossier. Si personne n'est assigné, seuls `role` et `remarque` sont renseignés.",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Réviseur, Logistique, Réviseur 2, Responsable dossier, Responsable RH, Expert signataire, Expert comptable, Responsable juridique ou Commercial APL"
+          },
+          "nomComplet": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "telephone": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "remarque": {
+            "type": "string",
+            "description": "Présent uniquement quand personne n'est assigné à ce rôle"
+          }
+        }
       }
     }
   }
