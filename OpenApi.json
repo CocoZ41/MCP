@@ -130,6 +130,49 @@
         }
       }
     },
+    "/clients/{identifiant}/equipe": {
+      "get": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Fiche d'un client avec son équipe",
+        "description": "Renvoie en une seule réponse la fiche d'un client (adresse, SIREN, e-mail de facturation, contacts) et son équipe APL (liste `affectations` avec les 9 rôles : Réviseur, Logistique, Réviseur 2, Responsable dossier, Responsable RH, Expert signataire, Expert comptable, Responsable juridique, Commercial APL). Recherche par AccountId ou n° de dossier exact. À utiliser pour « donne-moi le client 07876 et son équipe ».",
+        "operationId": "findClientEquipe",
+        "parameters": [
+          {
+            "name": "identifiant",
+            "in": "path",
+            "description": "AccountId (Guid CRM) ou n° de dossier du client",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "07876"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseClientEquipe"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
+    },
     "/clients/{accountId}/opportunites": {
       "get": {
         "tags": [
@@ -483,6 +526,58 @@
           }
         }
       }
+    },
+    "/collaborateurs/dossiers": {
+      "get": {
+        "tags": [
+          "Client"
+        ],
+        "summary": "Dossiers d'un collaborateur APL, avec son rôle sur chacun",
+        "description": "Sens inverse de l'équipe : pour un collaborateur APL recherché par nom ou e-mail (paramètre `q`, obligatoire), renvoie la liste de ses dossiers clients avec son rôle sur chacun. Le paramètre `role` filtre sur un rôle (par exemple « Expert comptable »). Renvoie au maximum `nombre` personnes (20 par défaut) et 100 dossiers par personne ; `nombreDossiers` donne le total. À utiliser pour « sur quels dossiers travaille X », « quels sont les clients de X », « quels dossiers X a-t-il comme expert comptable ».",
+        "operationId": "rechercherDossiersCollaborateur",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Nom ou e-mail (ou partie) du collaborateur APL, sans tenir compte des majuscules",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "barel"
+          },
+          {
+            "$ref": "#/components/parameters/role"
+          },
+          {
+            "$ref": "#/components/parameters/nombre"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReponseCollaborateurs"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/MauvaiseRequete"
+          },
+          "401": {
+            "$ref": "#/components/responses/NonAutorise"
+          },
+          "404": {
+            "$ref": "#/components/responses/NonTrouve"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErreurInterne"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -525,6 +620,16 @@
           "type": "string",
           "format": "uuid"
         }
+      },
+      "role": {
+        "name": "role",
+        "in": "query",
+        "description": "Filtre sur le rôle (optionnel), par exemple « Expert comptable » ou « Responsable dossier »",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "example": "Expert comptable"
       }
     },
     "responses": {
@@ -1157,6 +1262,115 @@
           "remarque": {
             "type": "string",
             "description": "Présent uniquement quand personne n'est assigné à ce rôle"
+          }
+        }
+      },
+      "ReponseClientEquipe": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "clientEquipe": {
+            "$ref": "#/components/schemas/ClientEquipe"
+          }
+        }
+      },
+      "ClientEquipe": {
+        "type": "object",
+        "description": "Fiche client et équipe APL du dossier",
+        "properties": {
+          "client": {
+            "$ref": "#/components/schemas/ClientDetail"
+          },
+          "equipe": {
+            "$ref": "#/components/schemas/EquipeClient"
+          }
+        }
+      },
+      "ReponseCollaborateurs": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "collaborateurs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CollaborateurDossiers"
+            }
+          }
+        }
+      },
+      "CollaborateurDossiers": {
+        "type": "object",
+        "description": "Un collaborateur APL et ses dossiers",
+        "properties": {
+          "nomComplet": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "nombreDossiers": {
+            "type": "integer",
+            "description": "Nombre total de dossiers correspondants (la liste `dossiers` est limitée à 100)"
+          },
+          "dossiers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DossierRole"
+            }
+          }
+        },
+        "example": {
+          "nomComplet": "Virginie BAREL",
+          "email": "V.Barel@auditpl.fr",
+          "nombreDossiers": 2,
+          "dossiers": [
+            {
+              "role": "Expert comptable",
+              "accountId": "ef773f4c-14e8-eb11-bacb-0022489b9951",
+              "noDossier": "07876",
+              "nom": "CARQUEFOOD",
+              "formeJuridique": "SASU",
+              "statut": "Sortie Client"
+            },
+            {
+              "role": "Expert signataire",
+              "accountId": "ef773f4c-14e8-eb11-bacb-0022489b9951",
+              "noDossier": "07876",
+              "nom": "CARQUEFOOD",
+              "formeJuridique": "SASU",
+              "statut": "Sortie Client"
+            }
+          ]
+        }
+      },
+      "DossierRole": {
+        "type": "object",
+        "description": "Dossier client sur lequel le collaborateur est assigné, avec son rôle",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Rôle du collaborateur sur ce dossier"
+          },
+          "accountId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "formeJuridique": {
+            "$ref": "#/components/schemas/FormeJuridique"
+          },
+          "statut": {
+            "type": "string"
           }
         }
       }
