@@ -180,7 +180,7 @@
           "Opportunite"
         ],
         "summary": "Opportunités d'un client",
-        "description": "Renvoie le résumé des opportunités d'un client, lues directement dans le CRM (pas de cache).",
+        "description": "Renvoie les opportunités d'un client lues directement dans le CRM (pas de cache), avec le maximum d'informations dont toutes les lignes produits.",
         "operationId": "opportunitesClient",
         "parameters": [
           {
@@ -203,7 +203,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReponseOpportunites"
+                  "$ref": "#/components/schemas/ReponseOpportunitesClient"
                 }
               }
             }
@@ -1371,6 +1371,73 @@
           },
           "statut": {
             "type": "string"
+          }
+        }
+      },
+      "OpportuniteClient": {
+        "type": "object",
+        "description": "Opportunité d'un client avec toutes ses lignes produits",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nom": {
+            "type": "string"
+          },
+          "noDossier": {
+            "type": "string"
+          },
+          "statut": {
+            "type": "string",
+            "description": "Statut tel qu'affiché dans le CRM"
+          },
+          "typeOpportunite": {
+            "type": "string"
+          },
+          "recurrente": {
+            "type": "boolean"
+          },
+          "montant": {
+            "type": "number"
+          },
+          "frequenceFacturation": {
+            "type": "string"
+          },
+          "nombreEcheances": {
+            "type": "integer"
+          },
+          "premiereFacturation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "derniereFacturation": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finExercice": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lignesProduits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LigneProduit"
+            }
+          }
+        }
+      },
+      "ReponseOpportunitesClient": {
+        "type": "object",
+        "properties": {
+          "header": {
+            "$ref": "#/components/schemas/Header"
+          },
+          "opportunites": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OpportuniteClient"
+            }
           }
         }
       }
